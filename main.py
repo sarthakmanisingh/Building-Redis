@@ -1,51 +1,37 @@
 import sys
 
+def encode_bulk_string(s):
+    if s is None:
+        return "$-1\r\n"
+    return f"${len(s)}\r\n{s}\r\n"
+
+def encode_simple_string(s):
+    return f"+{s}\r\n"
+
 def handle_command(args):
-    """Process a Redis command and return the RESP response."""
     cmd = args[0].upper()
-
     if cmd == "PING":
-        if len(args)>1:
-            
-            return f"${len(args[1:][0])}\r\n{args[1:][0]}\r\n"
-        else:
-            return "+PONG\r\n"
-        
-        # TODO: Return +PONG\r\n for no args
-        # TODO: Return bulk string for PING <message>
-        
-
-    return "-ERR unknown command\r\n"
-
-def main():
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        args = parse_args(line)
-        response = handle_command(args)
-        sys.stdout.write(response)
-        sys.stdout.flush()
+        if len(args) == 1:
+            return encode_simple_string("PONG")
+        return encode_bulk_string(args[1])
+    elif cmd == "ECHO":
+        return encode_bulk_string(args[1:][0])
+        # TODO: Return args[1] as a bulk string
+        pass
+    return f"-ERR unknown command '{cmd}'\r\n"
 
 def parse_args(line):
-    """Split a command line into arguments, handling quoted strings."""
-    args = []
-    current = ""
-    in_quotes = False
+    args, current, in_q = [], "", False
     for ch in line:
-        if ch == '"' and not in_quotes:
-            in_quotes = True
-        elif ch == '"' and in_quotes:
-            in_quotes = False
-        elif ch == ' ' and not in_quotes:
-            if current:
-                args.append(current)
-                current = ""
-        else:
-            current += ch
-    if current:
-        args.append(current)
+        if ch == '"': in_q = not in_q
+        elif ch == ' ' and not in_q:
+            if current: args.append(current); current = ""
+        else: current += ch
+    if current: args.append(current)
     return args
 
-if __name__ == "__main__":
-    main()
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    sys.stdout.write(handle_command(parse_args(line)))
+    sys.stdout.flush()
