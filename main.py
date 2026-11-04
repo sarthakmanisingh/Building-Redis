@@ -5,9 +5,15 @@ def handle_command(args):
     cmd = args[0].upper()
 
     if cmd == "PING":
+        if len(args)>1:
+            
+            return f"${len(args[1:][0])}\r\n{args[1:][0]}\r\n"
+        else:
+            return "+PONG\r\n"
+        
         # TODO: Return +PONG\r\n for no args
         # TODO: Return bulk string for PING <message>
-        pass
+        
 
     return "-ERR unknown command\r\n"
 
